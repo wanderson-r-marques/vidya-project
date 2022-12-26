@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('cnpj',14)->unique();
             $table->string('corporate_name');
-            $table->string('fantasy _name');
+            $table->string('fantasy_name');
             $table->string('zipcode',9);
             $table->string('adreess');
             $table->integer('number')->nullable();

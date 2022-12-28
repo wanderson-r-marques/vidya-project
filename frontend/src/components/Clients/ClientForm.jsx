@@ -3,20 +3,23 @@ import { object, string } from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { mask, unMask } from "remask";
 import { useState } from "react";
+import axios from "axios";
+import { removeSpecialCharacters } from "../../helpers/removeSpecialCharacters";
+import { toast } from "react-toastify";
 
 const schema = object({
-  cnpj: string().required("O campo CNPJ é obrigatório."),
+  cnpj: string(),
   corporate_name: string().required("O campo RAZÃO SOCIAL é obrigatório."),
   fantasy_name: string().required("O campo NOME FANTASIA é obrigatório."),
   email: string().required("O campo E-MAIL é obrigatório."),
-  phone: string().required("O campo TELEFONE é obrigatório."),
-  zipcode: string().required("O campo CEP é obrigatório."),
-  address: string().required("O campo ENDEREÇO é obrigatório."),
+  phone: string(),
+  zipcode: string(),
+  adreess: string().required("O campo ENDEREÇO é obrigatório."),
   number: string().required("O campo NÚMERO é obrigatório."),
   complement: string("O campo COMPLEMENTO precisa ser um texto."),
   district: string().required("O campo BAIRRO é obrigatório."),
   city: string().required("O campo CIDADE é obrigatório."),
-  state: string().required("O campo ESTADO é obrigatório."),
+  state: string(),
 });
 
 export const ClientForm = () => {
@@ -24,23 +27,108 @@ export const ClientForm = () => {
   const {
     register,
     handleSubmit,
+    setValue,
+    reset,
     formState: { errors },
   } = useForm({ resolver: yupResolver(schema) });
-  const onSubmit = (data) => console.log(data);
+  const onSubmit = (data) => {
+    data.cnpj = removeSpecialCharacters(document.querySelector("#cnpj").value);
+    data.zipcode = removeSpecialCharacters(
+      document.querySelector("#zipcode").value
+    );
+    data.phone = removeSpecialCharacters(
+      document.querySelector("#phone").value
+    );
+    clientRegister(data);
+    reset();
+  };
   // Inputs Masks
   const [cnpj, setCnpj] = useState();
   const handleCnpjMask = (event) => {
+    if (errors.cnpj) errors.cnpj.message = false;
     setCnpj(mask(event.target.value, ["99.999.999/9999-99"]));
   };
 
-  const [cep, setCep] = useState();
-  const handleCepMask = (event) => {
-    setCep(mask(event.target.value, ["99999-999"]));
+  const [zipcode, setZipcode] = useState();
+  const handleZipcodeMask = (event) => {
+    setZipcode(mask(event.target.value, ["99999-999"]));
   };
 
   const [phone, setPhone] = useState();
   const handlePhoneMask = (event) => {
     setPhone(mask(event.target.value, ["(99)9-9999-9999"]));
+  };
+
+  const [focus, setFocus] = useState(false);
+  const [focusCnpj, setFocusCnpj] = useState(false);
+
+  //   Api session
+  const apiZipcode = async (event) => {
+    const zipcode = event.target.value.replace("-", "");
+    const location = await axios(`https://viacep.com.br/ws/${zipcode}/json/`);
+    if (location.data) {
+      setFocus(true);
+      setValue("adreess", location.data.logradouro);
+      setValue("complement", location.data.complemento);
+      setValue("district", location.data.bairro);
+      setValue("city", location.data.localidade);
+      setValue("state", location.data.uf);
+    }
+  };
+
+  const apiCnpj = async (event) => {
+    const cnpj = event.target.value
+      .replace("-", "")
+      .replaceAll(".", "")
+      .replace("/", "");
+    const result = await axios.get(
+      `https://cors-anywhere.herokuapp.com/http://receitaws.com.br/v1/cnpj/${cnpj}`,
+      {
+        headers: {
+          "Access-Control-Allow-Origin": true,
+        },
+      }
+    );
+    if (result.data) {
+      setFocusCnpj(true);
+      const dddPhone = result.data.telefone
+        .split("/")[0]
+        .replace(" ", "")
+        .replace("(", "")
+        .replace("-", "")
+        .split(")");
+      const ddd = dddPhone[0];
+      const phone = 9 + dddPhone[1];
+      const phoneComplete = ddd + phone;
+      document.querySelector("#phone").value = mask(phoneComplete, [
+        "(99)9-9999-9999",
+      ]);
+      setValue("email", result.data.email);
+      setValue("corporate_name", result.data.nome);
+      setValue("fantasy_name", result.data.fantasia);
+      setValue("phone", result.data.telefone.split("/")[0]);
+    }
+  };
+
+  const clientRegister = async (data) => {
+    try {
+      const resp = await axios.post("http://localhost/api/clients", data);
+      if (resp.statusText === "Created") {
+        toast.success("Cadastrado com sucesso!", {
+          position: "bottom-left",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+        });
+      }
+    } catch (err) {
+      // Handle Error Here
+      console.error(err);
+    }
   };
 
   return (
@@ -69,6 +157,8 @@ export const ClientForm = () => {
                   <input
                     type="text"
                     value={cnpj}
+                    id="cnpj"
+                    onBlur={apiCnpj}
                     onChange={handleCnpjMask}
                     inputProps={register("cnpj")}
                     className="form-control"
@@ -78,7 +168,11 @@ export const ClientForm = () => {
               </div>
 
               <div className="col-md-6">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focusCnpj && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Razão Social</label>
                   <input
                     type="text"
@@ -93,7 +187,11 @@ export const ClientForm = () => {
             </div>
             <div className="row">
               <div className="col-md-6">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focusCnpj && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Nome Fantasia</label>
                   <input
                     type="text"
@@ -106,7 +204,11 @@ export const ClientForm = () => {
                 </span>
               </div>
               <div className="col-md-3">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focusCnpj && "is-focused"
+                  }`}
+                >
                   <label className="form-label">E-mail</label>
                   <input
                     type="text"
@@ -117,11 +219,16 @@ export const ClientForm = () => {
                 <span className="text-primary">{errors?.email?.message}</span>
               </div>
               <div className="col-md-3">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focusCnpj && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Telefone</label>
                   <input
                     type="text"
                     value={phone}
+                    id="phone"
                     onChange={handlePhoneMask}
                     inputProps={register("phone")}
                     className="form-control"
@@ -136,24 +243,30 @@ export const ClientForm = () => {
                   <label className="form-label">CEP</label>
                   <input
                     type="text"
-                    value={cep}
-                    onChange={handleCepMask}
-                    inputProps={register("cep")}
+                    value={zipcode}
+                    id="zipcode"
+                    onBlur={apiZipcode}
+                    onChange={handleZipcodeMask}
+                    inputProps={register("zipcode")}
                     className="form-control"
                   />
                 </div>
                 <span className="text-primary">{errors?.zipcode?.message}</span>
               </div>
               <div className="col-md-6">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focus && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Endereço</label>
                   <input
                     type="text"
-                    {...register("address")}
+                    {...register("adreess")}
                     className="form-control"
                   />
                 </div>
-                <span className="text-primary">{errors?.address?.message}</span>
+                <span className="text-primary">{errors?.adreess?.message}</span>
               </div>
               <div className="col-md-2">
                 <div className="input-group input-group-outline mt-3">
@@ -182,7 +295,11 @@ export const ClientForm = () => {
                 </span>
               </div>
               <div className="col-md-3">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focus && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Bairro</label>
                   <input
                     type="text"
@@ -195,7 +312,11 @@ export const ClientForm = () => {
                 </span>
               </div>
               <div className="col-md-3">
-                <div className="input-group input-group-outline mt-3">
+                <div
+                  className={`input-group input-group-outline mt-3 ${
+                    focus && "is-focused"
+                  }`}
+                >
                   <label className="form-label">Cidade</label>
                   <input
                     type="text"
@@ -206,20 +327,49 @@ export const ClientForm = () => {
                 <span className="text-primary">{errors?.city?.message}</span>
               </div>
               <div className="col-md-3">
-                <div className="input-group input-group-outline mt-3">
-                  <label className="form-label">Estado</label>
-                  <input
-                    type="text"
+                <div className={`input-group input-group-outline mt-3`}>
+                  <select
+                    class="form-control"
+                    id="exampleFormControlSelect1"
                     {...register("state")}
-                    className="form-control"
-                  />
+                    placeholder="teste"
+                  >
+                    <option value="">Estado</option>
+                    <option value="AC">Acre</option>
+                    <option value="AL">Alagoas</option>
+                    <option value="AP">Amapá</option>
+                    <option value="AM">Amazonas</option>
+                    <option value="BA">Bahia</option>
+                    <option value="CE">Ceará</option>
+                    <option value="DF">Distrito Federal</option>
+                    <option value="ES">Espírito Santo</option>
+                    <option value="GO">Goiás</option>
+                    <option value="MA">Maranhão</option>
+                    <option value="MT">Mato Grosso</option>
+                    <option value="MS">Mato Grosso do Sul</option>
+                    <option value="MG">Minas Gerais</option>
+                    <option value="PA">Pará</option>
+                    <option value="PB">Paraíba</option>
+                    <option value="PR">Paraná</option>
+                    <option value="PE">Pernambuco</option>
+                    <option value="PI">Piauí</option>
+                    <option value="RJ">Rio de Janeiro</option>
+                    <option value="RN">Rio Grande do Norte</option>
+                    <option value="RS">Rio Grande do Sul</option>
+                    <option value="RO">Rondônia</option>
+                    <option value="RR">Roraima</option>
+                    <option value="SC">Santa Catarina</option>
+                    <option value="SP">São Paulo</option>
+                    <option value="SE">Sergipe</option>
+                    <option value="TO">Tocantins</option>
+                  </select>
                 </div>
                 <span className="text-primary">{errors?.state?.message}</span>
               </div>
             </div>
-            <div className="row">
-              <div class="col-12">
-                <button type="submit" class="btn btn-secondary">
+            <div className="row mt-4">
+              <div className="col-12">
+                <button type="submit" className="btn btn-secondary">
                   Cadastrar
                 </button>
               </div>

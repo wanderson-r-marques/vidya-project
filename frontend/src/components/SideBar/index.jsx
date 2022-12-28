@@ -5,7 +5,7 @@ export const SideBar = () => {
     <>
       <div
         className="offcanvas offcanvas-end d-flex flex-column flex-shrink-0 p-3 bg-light"
-        tabindex="-1"
+        tabIndex="-1"
         id="offcanvasRight"
         aria-labelledby="offcanvasRightLabel"
         style={{ width: 280 }}

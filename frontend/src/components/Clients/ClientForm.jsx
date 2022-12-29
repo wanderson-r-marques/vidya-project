@@ -115,7 +115,18 @@ export const ClientForm = () => {
       const resp = await axios.post("http://localhost/api/clients", data);
       if (resp.statusText === "Created") {
         toast.success("Cadastrado com sucesso!", {
-          position: "bottom-left",
+          position: "bottom-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+        });
+      } else {
+        toast.error("Cadastrado com sucesso!", {
+          position: "bottom-right",
           autoClose: 5000,
           hideProgressBar: false,
           closeOnClick: true,
@@ -127,27 +138,38 @@ export const ClientForm = () => {
       }
     } catch (err) {
       // Handle Error Here
-      console.error(err);
+      toast.error(err, {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+      });
     }
   };
 
   return (
     <>
-      <button
-        className="btn btn-secondary "
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#collapseExample"
-        aria-expanded="false"
-        aria-controls="collapseExample"
-      >
-        <span className="btn-inner--icon">
-          <i className="fa fa-user"></i>
-        </span>
-        <span className="btn-inner--text"> Cadastrar cliente</span>
-      </button>
+      <div className="d-flex justify-content-end">
+        <button
+          className="btn btn-secondary w-40"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseExample"
+          aria-expanded="false"
+          aria-controls="collapseExample"
+        >
+          <span className="btn-inner--icon">
+            <i className="fa fa-user"></i>
+          </span>
+          <span className="btn-inner--text"> Cadastrar cliente</span>
+        </button>
+      </div>
 
-      <div className="collapse" id="collapseExample">
+      <div className="collapse mb-5" id="collapseExample">
         <div className="card card-body">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="row">
@@ -329,7 +351,7 @@ export const ClientForm = () => {
               <div className="col-md-3">
                 <div className={`input-group input-group-outline mt-3`}>
                   <select
-                    class="form-control"
+                    className="form-control"
                     id="exampleFormControlSelect1"
                     {...register("state")}
                     placeholder="teste"

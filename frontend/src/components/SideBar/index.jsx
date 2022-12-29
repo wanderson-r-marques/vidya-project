@@ -8,7 +8,7 @@ export const SideBar = () => {
         tabIndex="-1"
         id="offcanvasRight"
         aria-labelledby="offcanvasRightLabel"
-        style={{ width: 280 }}
+        style={{ width: 280, zIndex: 9999 }}
       >
         <div className="d-flex justify-content-end">
           <button

@@ -10,4 +10,8 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = array('name', 'descrition', 'version');
+
+    public function clients(){
+        return $this->belongsToMany(Client::class)->withPivot('expiration_date')->withTimestamps();
+    }
 }
